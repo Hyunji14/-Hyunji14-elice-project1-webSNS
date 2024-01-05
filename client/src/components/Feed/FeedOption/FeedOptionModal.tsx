@@ -1,0 +1,125 @@
+import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
+import { useCustomDialog } from "../../common/hooks/useCustomDialog";
+import * as S from "../../common/hooks/useCustomDialog.styles";
+import { PATH } from "@/global/constants";
+import { HiDotsHorizontal } from "react-icons/hi";
+import { storage, storageKeys } from "@/global/storage";
+import { useState } from "react";
+import { useDeleteFeed } from "../Feed.hooks";
+
+export function FeedOptionModal({
+  feedId,
+  userId,
+}: {
+  feedId: string;
+  userId: string;
+}) {
+  const {
+    ActionSheetLayout,
+    ConfirmPopupLayout,
+    toggleDialog,
+    afterOpenDialog,
+    opacity,
+    isOpen,
+  } = useCustomDialog();
+
+  const [isOpen2, setIsOpen2] = useState(false);
+  const [opacity2, setOpacity2] = useState(0);
+
+  const { deleteFeed } = useDeleteFeed();
+  const navigate = useNavigate();
+
+  const localUserData = storage.get(storageKeys.currentUser);
+
+  function toggleDialog2() {
+    setIsOpen2(!isOpen2);
+  }
+  function afterOpenDialog2() {
+    setTimeout(() => {
+      setOpacity2(1);
+    }, 100);
+  }
+
+  function beforeCloseDialog2() {
+    return new Promise((resolve) => {
+      setOpacity2(0);
+      setTimeout(resolve, 350);
+    });
+  }
+  const options = [
+    {
+      name: "수정",
+      usage: "POSITIVE",
+      onClick: () => navigate(PATH.updateFeed(feedId)),
+    },
+    {
+      name: "삭제",
+      usage: "ALERT",
+      onClick: () => {
+        toggleDialog();
+        toggleDialog2();
+      },
+    },
+  ];
+  const options2 = [
+    {
+      name: "신고하기",
+      usage: "ALERT",
+      onClick: async () => {
+        toast.success("신고가 완료되었습니다.");
+        toggleDialog();
+      },
+    },
+  ];
+  const buttons = [
+    {
+      name: "취소",
+      usage: "NEUTRAL",
+      onClick: () => toggleDialog2(),
+    },
+    {
+      name: "확인",
+      usage: "SUBMIT",
+      onClick: async () => {
+        await deleteFeed(feedId);
+        toggleDialog2();
+      },
+    },
+  ];
+  return (
+    <>
+      <HiDotsHorizontal onClick={toggleDialog} />
+      <S.ActionSheet
+        isOpen={isOpen}
+        afterOpen={afterOpenDialog}
+        onBackgroundClick={toggleDialog}
+        onEscapeKeydown={toggleDialog}
+        opacity={opacity}
+        backgroundProps={{ opacity }}
+        length={options?.length}
+        children={
+          <ActionSheetLayout
+            options={localUserData?.userId === userId ? options : options2}
+          />
+        }
+      ></S.ActionSheet>
+
+      <S.ConfirmPopup
+        isOpen={isOpen2}
+        afterOpen={afterOpenDialog2}
+        beforeClose={beforeCloseDialog2}
+        onBackgroundClick={toggleDialog2}
+        onEscapeKeydown={toggleDialog2}
+        opacity={opacity2}
+        backgroundProps={{ opacity2 }}
+        children={
+          <ConfirmPopupLayout
+            description="피드를 삭제하시겠습니까?"
+            buttons={buttons}
+          ></ConfirmPopupLayout>
+        }
+      ></S.ConfirmPopup>
+    </>
+  );
+}
